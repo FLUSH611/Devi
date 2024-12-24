@@ -1,0 +1,64 @@
+pipeline {
+    agent any
+    tools {
+        jdk 'JAVA_HOME'
+        maven 'M2_HOME'
+    }
+    stages {
+        stage('Clean Workspace') {
+            steps {
+                echo 'Cleaning Jenkins workspace...'
+                deleteDir()  // This will clean the workspace
+            }
+        }
+
+        stage('Git Checkout') {
+            steps {
+                echo 'Fetching code from GitHub...'
+                git branch: 'main', url: 'https://github.com/FLUSH611/DevO.git'
+            }
+        }
+
+        stage('Verify Workspace Content') {
+            steps {
+                echo 'Listing files in the workspace to verify pom.xml location...'
+                sh 'ls -alh'  // List files in the current directory (workspace) after checkout
+            }
+        }
+
+        stage('Maven Clean') {
+            steps {
+                echo 'Cleaning project...'
+                script {
+                    def pomFile = 'pom.xml'
+                    if (fileExists(pomFile)) {
+                        echo "Found pom.xml, running mvn clean..."
+                        sh "mvn clean -f ${pomFile}"  // Use relative path to pom.xml
+                    } else {
+                        error "pom.xml not found, unable to run mvn clean"
+                    }
+                }
+            }
+        }
+
+        stage('Compile Stage') {
+                    steps {
+                        sh 'mvn clean compile'
+                    }
+                }
+
+                stage('Package Stage') {
+                    steps {
+                        sh 'mvn package -DskipTests'
+                    }
+                }
+
+    post {
+        success {
+            echo 'Build completed successfully.'
+        }
+        failure {
+            echo 'Build failed.'
+        }
+    }
+}
