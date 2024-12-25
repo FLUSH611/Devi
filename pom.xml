@@ -127,7 +127,7 @@
                 </configuration>
             </plugin>
 
-            <!-- Add maven-surefire-plugin for test execution -->
+
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
