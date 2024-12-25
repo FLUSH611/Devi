@@ -1,120 +1,133 @@
 package tn.esprit.eventsproject.services;
 
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.scheduling.annotation.Scheduled;
-import org.springframework.stereotype.Service;
-import tn.esprit.eventsproject.entities.Event;
-import tn.esprit.eventsproject.entities.Logistics;
-import tn.esprit.eventsproject.entities.Participant;
-import tn.esprit.eventsproject.entities.Tache;
-import tn.esprit.eventsproject.repositories.EventRepository;
-import tn.esprit.eventsproject.repositories.LogisticsRepository;
-import tn.esprit.eventsproject.repositories.ParticipantRepository;
-
+import static org.mockito.Mockito.*;
+import static org.junit.jupiter.api.Assertions.*;
+import org.mockito.Mock;
+import org.mockito.InjectMocks;
+import org.mockito.MockitoAnnotations;
+import org.junit.jupiter.api.Test;   // For JUnit 5
+import org.junit.jupiter.api.BeforeEach; // For setup in JUnit 5
+import tn.esprit.eventsproject.entities.*;
+import tn.esprit.eventsproject.repositories.*;
 import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-@Slf4j
-@RequiredArgsConstructor
-@Service
-public class EventServicesImpl implements IEventServices{
+import java.util.*;
 
-    private final EventRepository eventRepository;
-    private final ParticipantRepository participantRepository;
-    private final LogisticsRepository logisticsRepository;
+class EventServicesImplTest {
 
-    @Override
-    public Participant addParticipant(Participant participant) {
-        return participantRepository.save(participant);
+    @Mock
+    private EventRepository eventRepository;
+
+    @Mock
+    private ParticipantRepository participantRepository;
+
+    @Mock
+    private LogisticsRepository logisticsRepository;
+
+    @InjectMocks
+    private EventServicesImpl eventServices;
+
+    private Event event;
+    private Participant participant;
+    private Logistics logistics;
+    private Set<Participant> participants;
+    private Set<Logistics> logisticsSet;
+
+    @BeforeEach
+    void setUp() {
+        // Initialize mocks
+        MockitoAnnotations.openMocks(this);
+
+        // Mock Event
+        event = new Event();
+        event.setDescription("Sample Event");
+
+        // Mock Participant
+        participant = new Participant();
+        participant.setIdPart(1);
+        participant.setNom("Tounsi");
+        participant.setPrenom("Ahmed");
+        participant.setEvents(new HashSet<>());
+
+        // Mock Logistics
+        logistics = new Logistics();
+        logistics.setReserve(true);
+        logistics.setPrixUnit(100);
+        logistics.setQuantite(2);
+
+        participants = new HashSet<>();
+        participants.add(participant);
+
+        logisticsSet = new HashSet<>();
+        logisticsSet.add(logistics);
     }
 
-    @Override
-    public Event addAffectEvenParticipant(Event event, int idParticipant) {
-        Participant participant = participantRepository.findById(idParticipant).orElse(null);
-        if(participant.getEvents() == null){
-            Set<Event> events = new HashSet<>();
-            events.add(event);
-            participant.setEvents(events);
-        }else {
-            participant.getEvents().add(event);
-        }
-        return eventRepository.save(event);
+    @Test
+    void testAddParticipant() {
+        // Arrange
+        when(participantRepository.save(any(Participant.class))).thenReturn(participant);
+
+        // Act
+        Participant savedParticipant = eventServices.addParticipant(participant);
+
+        // Assert
+        assertNotNull(savedParticipant);
+        verify(participantRepository, times(1)).save(participant);
     }
 
-    @Override
-    public Event addAffectEvenParticipant(Event event) {
-        Set<Participant> participants = event.getParticipants();
-        for(Participant aParticipant:participants){
-            Participant participant = participantRepository.findById(aParticipant.getIdPart()).orElse(null);
-            if(participant.getEvents() == null){
-                Set<Event> events = new HashSet<>();
-                events.add(event);
-                participant.setEvents(events);
-            }else {
-                participant.getEvents().add(event);
-            }
-        }
-        return eventRepository.save(event);
+    @Test
+    void testAddAffectEvenParticipant() {
+        // Arrange
+        when(participantRepository.findById(1)).thenReturn(Optional.of(participant));
+        when(eventRepository.save(any(Event.class))).thenReturn(event);
+
+        // Act
+        Event updatedEvent = eventServices.addAffectEvenParticipant(event, 1);
+
+        // Assert
+        assertTrue(updatedEvent.getParticipants().contains(participant));
+        verify(eventRepository, times(1)).save(event);
     }
 
-    @Override
-    public Logistics addAffectLog(Logistics logistics, String descriptionEvent) {
-      Event event = eventRepository.findByDescription(descriptionEvent);
-      if(event.getLogistics() == null){
-          Set<Logistics> logisticsSet = new HashSet<>();
-          logisticsSet.add(logistics);
-          event.setLogistics(logisticsSet);
-          eventRepository.save(event);
-      }
-      else{
-          event.getLogistics().add(logistics);
-      }
-        return logisticsRepository.save(logistics);
+    @Test
+    void testAddAffectLog() {
+        // Arrange
+        when(eventRepository.findByDescription("Sample Event")).thenReturn(event);
+        when(logisticsRepository.save(any(Logistics.class))).thenReturn(logistics);
+
+        // Act
+        Logistics savedLogistics = eventServices.addAffectLog(logistics, "Sample Event");
+
+        // Assert
+        assertNotNull(savedLogistics);
+        verify(logisticsRepository, times(1)).save(logistics);
     }
 
-    @Override
-    public List<Logistics> getLogisticsDates(LocalDate date_debut, LocalDate date_fin) {
-        List<Event> events = eventRepository.findByDateDebutBetween(date_debut, date_fin);
+    @Test
+    void testGetLogisticsDates() {
+        // Arrange
+        when(eventRepository.findByDateDebutBetween(any(LocalDate.class), any(LocalDate.class))).thenReturn(Collections.singletonList(event));
 
-        List<Logistics> logisticsList = new ArrayList<>();
-        for (Event event:events){
-            if(event.getLogistics().isEmpty()){
+        // Act
+        List<Logistics> logisticsList = eventServices.getLogisticsDates(LocalDate.now(), LocalDate.now().plusDays(1));
 
-                return null;
-            }
-
-            else {
-                Set<Logistics> logisticsSet = event.getLogistics();
-                for (Logistics logistics:logisticsSet){
-                    if(logistics.isReserve())
-                        logisticsList.add(logistics);
-                }
-            }
-        }
-        return logisticsList;
+        // Assert
+        assertNotNull(logisticsList);
+        assertEquals(1, logisticsList.size());
     }
 
+    @Test
+    void testCalculCout() {
+        // Arrange
+        List<Event> events = new ArrayList<>();
+        events.add(event);
+        when(eventRepository.findByParticipants_NomAndParticipants_PrenomAndParticipants_Tache("Tounsi", "Ahmed", Tache.ORGANISATEUR)).thenReturn(events);
+        when(eventRepository.save(any(Event.class))).thenReturn(event);
 
-    @Override
-    public void calculCout() {
-        List<Event> events = eventRepository.findByParticipants_NomAndParticipants_PrenomAndParticipants_Tache("Tounsi","Ahmed", Tache.ORGANISATEUR);
-    // eventRepository.findAll();
-        float somme = 0f;
-        for(Event event:events){
-            log.info(event.getDescription());
-            Set<Logistics> logisticsSet = event.getLogistics();
-            for (Logistics logistics:logisticsSet){
-                if(logistics.isReserve())
-                    somme+=logistics.getPrixUnit()*logistics.getQuantite();
-            }
-            event.setCout(somme);
-            eventRepository.save(event);
-            log.info("Cout de l'Event "+event.getDescription()+" est "+ somme);
+        // Act
+        eventServices.calculCout();  // Calling the actual method
 
-        }
+        // Assert
+        assertEquals(200, event.getCout());
+        verify(eventRepository, times(1)).save(event);
     }
-
 }
