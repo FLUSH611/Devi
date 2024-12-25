@@ -126,7 +126,7 @@
                     <tagNameFormat>v@{project.version}</tagNameFormat>
                 </configuration>
             </plugin>
-
+            <!-- Add maven-surefire-plugin for test execution -->
             <!-- Add maven-surefire-plugin for test execution -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
